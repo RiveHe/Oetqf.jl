@@ -71,7 +71,7 @@ end
         for l ∈ axes(gf, 3)
             for i ∈ axes(gf, 1)
                 # Adjust the traction calculation by the pore pressure
-                adjusted_stress = gf[i, j, l] * (1 - 𝓅[i, j])
+                adjusted_stress = gf[i, j, l] - 𝓅[i, j]
                 alloc.dτ_dt_dft[i, j] += adjusted_stress * alloc.relv_dft[i, l]
             end
         end
