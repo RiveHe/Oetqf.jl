@@ -23,6 +23,7 @@ function gen_alloc(::Val{:BEMFault}, nx::I, nξ::I; T=Float64, fftw_flags::UInt3
 
     return TractionRateAllocFFTConv(
         Matrix{T}(undef, nx, nξ),
+        Matrix{T}(undef, nx, nξ),
         zeros(T, 2nx-1, nξ), zeros(T, nx, nξ), # for relative velocity, including zero
         [Matrix{Complex{T}}(undef, nx, nξ) for _ ∈ 1: 2]...,
         Matrix{T}(undef, 2nx-1, nξ),
