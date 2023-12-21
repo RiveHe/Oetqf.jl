@@ -11,6 +11,7 @@ struct TractionRateAllocFFTConv{T, U, P<:FFTW.Plan} <: ODEAllocation
     pf::P # real-value-FFT forward operator
 end
 
+
 struct StressRateAllocMatrix{T} <: ODEAllocation
     reldϵ::T
 end
@@ -59,6 +60,34 @@ end
         end
     end
 end
+
+@inline function dτ_dt_dila!(gf::AbstractArray{T, 3}, alloc::TractionRateAllocFFTConv, 𝓅::AbstractMatrix{T}) where {T<:Complex}
+    # Calculate the FFT of the relative velocity
+    mul!(alloc.relv_dft, alloc.pf, alloc.relv)
+    fill!(alloc.dτ_dt_dft, zero(T))
+
+    # Calculate the traction rate considering the pore pressure
+    @batch for j ∈ axes(gf, 2)
+        for l ∈ axes(gf, 3)
+            for i ∈ axes(gf, 1)
+                # Adjust the traction calculation by the pore pressure
+                adjusted_stress = gf[i, j, l] * (1 - 𝓅[i, j])
+                alloc.dτ_dt_dft[i, j] += adjusted_stress * alloc.relv_dft[i, l]
+            end
+        end
+    end
+
+    # Perform the inverse FFT to get the traction rate in the spatial domain
+    ldiv!(alloc.dτ_dt_buffer, alloc.pf, alloc.dτ_dt_dft)
+
+    # Extract the relevant part of the traction rate
+    @batch for j ∈ axes(alloc.dτ_dt, 2)
+        for i ∈ axes(alloc.dτ_dt, 1)
+            alloc.dτ_dt[i, j] = alloc.dτ_dt_buffer[i, j]
+        end
+    end
+end
+
 
 # build ode
 function assemble(
@@ -122,7 +151,7 @@ function ode(du::T, u::T, p::Tuple{P1, P2, AL, A, SE}, t::U
     prop, dila, alloc, gf, se = p
 
     relative_velocity!(alloc, prop.vpl, v)
-    dτ_dt!(gf, alloc)
+    dτ_dt_dila!(gf, alloc, 𝓅)
     update_fault_with_dilatancy!(prop, dila, alloc, v, θ, 𝓅, dv, dθ, dδ, d𝓅, se)
 end
 
@@ -208,7 +237,7 @@ end
         θᶠᵇ = θᶠ ^ bᶠ
 
         dv[i] = (
-            alloc.dτ_dt[i] +
+            alloc.dτ_dt_dila[i] +
             p.f₀ * d𝓅[i] * vᶠᵃ * θᶠᵇ -
             p.f₀ * (p.σ[i] - 𝓅[i]) * vᶠᵃ * θᶠᵇ⁻¹ * bᶠ * p.v₀ / p.L[i] * dθ[i]
         ) / (
