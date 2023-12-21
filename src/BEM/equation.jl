@@ -2,6 +2,7 @@
 abstract type ODEAllocation end
 
 struct TractionRateAllocFFTConv{T, U, P<:FFTW.Plan} <: ODEAllocation
+    dτ_dt_dila::T
     dτ_dt::T # traction rate of interest
     relv::T # relative velocity including zero-padding
     relvnp::T # relative velocity excluding zero-padding area
