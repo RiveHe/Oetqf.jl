@@ -61,7 +61,7 @@ end
     end
 end
 
-function dτ_dt_dila!(gf::AbstractArray{Complex{T}, 3}, alloc::Oetqf.TractionRateAllocFFTConv, 𝓅::AbstractMatrix{T}) where T
+@inline function dτ_dt_dila!(gf::AbstractArray{T, 3}, alloc::TractionRateAllocFFTConv, 𝓅::AbstractMatrix{S}) where {T<:Complex, S<:Real}
     # Calculate the FFT of the relative velocity
     mul!(alloc.relv_dft, alloc.pf, alloc.relv)
     fill!(alloc.dτ_dt_dft, zero(T))
