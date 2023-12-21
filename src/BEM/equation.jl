@@ -2,7 +2,6 @@
 abstract type ODEAllocation end
 
 struct TractionRateAllocFFTConv{T, U, P<:FFTW.Plan} <: ODEAllocation
-    dτ_dt_dila::T
     dτ_dt::T # traction rate of interest
     relv::T # relative velocity including zero-padding
     relvnp::T # relative velocity excluding zero-padding area
@@ -23,11 +22,8 @@ function gen_alloc(::Val{:BEMFault}, nx::I, nξ::I; T=Float64, fftw_flags::UInt3
 
     return TractionRateAllocFFTConv(
         Matrix{T}(undef, nx, nξ),
-        Matrix{T}(undef, nx, nξ),
         zeros(T, 2nx-1, nξ), zeros(T, nx, nξ), # for relative velocity, including zero
-        #[Matrix{Complex{T}}(undef, nx, nξ) for _ ∈ 1: 2]...,
-        Matrix{Complex{T}}(undef, nx, nξ),  # dτ_dt_dft
-        Matrix{Complex{T}}(undef, nx, nξ),
+        [Matrix{Complex{T}}(undef, nx, nξ) for _ ∈ 1: 2]...,
         Matrix{T}(undef, 2nx-1, nξ),
         p1)
 end
@@ -241,7 +237,7 @@ end
         θᶠᵇ = θᶠ ^ bᶠ
 
         dv[i] = (
-            alloc.dτ_dt_dila[i] +
+            alloc.dτ_dt[i] +
             p.f₀ * d𝓅[i] * vᶠᵃ * θᶠᵇ -
             p.f₀ * (p.σ[i] - 𝓅[i]) * vᶠᵃ * θᶠᵇ⁻¹ * bᶠ * p.v₀ / p.L[i] * dθ[i]
         ) / (
